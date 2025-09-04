@@ -6,6 +6,7 @@ const app = express()
 import dotenv from 'dotenv'
 dotenv.config({ path: './example.env' })
 
+app.use(express.json())
 
 app.use('/users', userRouter)
 

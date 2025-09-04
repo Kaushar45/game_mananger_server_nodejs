@@ -1,9 +1,16 @@
 const signup = (req, res, next) => {
-  res.json({ msg: "signup done" });
+  res.json({ msg: "signup is successful" });
 };
 
 const login = (req, res, next) => {
-  res.json({ msg: "login done" });
+  res.json({ msg: "login is successful" });
 };
 
-export { signup, login };
+const forgotPassword = (req, res, next) => {
+  res.json({ msg: "forgot password" });
+};
+const resetPassword = (req, res, next) => {
+  res.json({ msg: "reset password" });
+};
+
+export { signup, login, forgotPassword, resetPassword };
