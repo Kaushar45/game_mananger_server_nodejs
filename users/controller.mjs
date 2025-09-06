@@ -1,4 +1,11 @@
-const signup = (req, res, next) => {
+import { ServerError } from "../error.mjs";
+import { errorPritify, UserSignupModel } from "./validator.mjs";
+
+const signup = async (req, res, next) => {
+  const result = await UserSignupModel.safeParseAsync(req.body);
+  if (!result.success) {
+    throw new ServerError(400, errorPritify(result));
+  }
   res.json({ msg: "signup is successful" });
 };
 
