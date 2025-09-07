@@ -1,4 +1,6 @@
 import { ServerError } from "../error.mjs";
+import bcrypt from "bcrypt";
+import prisma from "../prisma/db.mjs";
 import { errorPritify, UserSignupModel } from "./validator.mjs";
 
 const signup = async (req, res, next) => {
@@ -6,6 +8,15 @@ const signup = async (req, res, next) => {
   if (!result.success) {
     throw new ServerError(400, errorPritify(result));
   }
+  const hasedPassword = await bcrypt.hash(req.body.password, 10);
+
+  const newUser = await prisma.user.create({
+    data: {
+      email: req.body.email,
+      name: req.body.name,
+      password: hasedPassword,
+    },
+  });
   res.json({ msg: "signup is successful" });
 };
 
