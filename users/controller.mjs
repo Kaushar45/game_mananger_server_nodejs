@@ -1,8 +1,9 @@
 import { ServerError } from "../error.mjs";
 import bcrypt from "bcrypt";
 import prisma from "../prisma/db.mjs";
-import { errorPritify, UserSignupModel } from "./validator.mjs";
+import { errorPritify, UserSignupModel, UserLoginModel } from "./validator.mjs";
 import emailQueue from "../queue/email.queue.mjs";
+import jwt from "jsonwebtoken";
 
 const signup = async (req, res, next) => {
   const result = await UserSignupModel.safeParseAsync(req.body);
@@ -30,8 +31,46 @@ const signup = async (req, res, next) => {
   res.json({ msg: "signup is successful" });
 };
 
-const login = (req, res, next) => {
-  res.json({ msg: "login is successful" });
+const login = async (req, res, next) => {
+  const result = await UserLoginModel.safeParseAsync(req.body);
+
+  if (!result.success) {
+    throw new ServerError(400, errorPritify(result));
+  }
+  // find user in DB
+  const user = await prisma.user.findUnique({
+    where: {
+      email: req.body.email,
+    },
+  });
+
+  if (!user) {
+    throw new ServerError(404, "user not found.");
+  }
+  const isOk = await bcrypt.compare(req.body.password, user.password);
+
+  if (!isOk) {
+    throw new ServerError(401, "wrong password.");
+  }
+
+  const token = jwt.sign(
+    {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
+    process.env.TOKEN_SECRET,
+    {
+      expiresIn: "1h",
+    }
+  );
+
+  res.json({
+    msg: "login is successful",
+    token,
+    name: user.name,
+    email: user.email,
+  });
 };
 
 const forgotPassword = (req, res, next) => {
