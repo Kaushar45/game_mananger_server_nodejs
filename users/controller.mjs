@@ -2,7 +2,7 @@ import { ServerError } from "../error.mjs";
 import bcrypt from "bcrypt";
 import prisma from "../prisma/db.mjs";
 import { errorPritify, UserSignupModel } from "./validator.mjs";
-import sendEmail from "../email.mjs";
+import emailQueue from "../queue/email.queue.mjs";
 
 const signup = async (req, res, next) => {
   const result = await UserSignupModel.safeParseAsync(req.body);
@@ -18,14 +18,14 @@ const signup = async (req, res, next) => {
       password: hasedPassword,
     },
   });
-  await sendEmail(
-    newUser.email,
-    "Veriication.Email",
-    `  <html>
-      <h1>Welcom ${newUser.name}</h1>
+  await emailQueue.add("Welcome Email", {
+    to: newUser.email,
+    subject: "Verification Email",
+    body: `<html>
+      <h1>Welcome ${newUser.name}</h1>
       <a href="https://google.com"> click here to veriy account</a>
-    </html>`
-  );
+    </html>`,
+  });
 
   res.json({ msg: "signup is successful" });
 };
