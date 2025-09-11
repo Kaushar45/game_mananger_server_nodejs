@@ -137,4 +137,8 @@ const resetPassword = async (req, res, next) => {
   res.json({ message: "password reset successful" });
 };
 
-export { signup, login, forgotPassword, resetPassword };
+const getMyProfile = async (req, res, next) => {
+  res.json({ message: "This is My Profile" });
+};
+
+export { signup, login, forgotPassword, resetPassword, getMyProfile };
