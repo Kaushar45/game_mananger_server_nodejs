@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "public"."User" ADD COLUMN     "resetToken" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "resetTokenExpiry" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
