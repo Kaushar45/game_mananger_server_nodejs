@@ -20,6 +20,58 @@ model User {
   name             String?
   password         String
   accountVerified  Boolean  @default(false)
-  resetToken       String   @default("")
-  resetTokenExpiry DateTime @default(now())
+  resetToken       String?   @default("")
+  resetTokenExpiry DateTime? @default(now())
+   profilePhoto      String?
+  createdAt         DateTime            @default(now())
+  PlayerGameProfile PlayerGameProfile[]
+  GameSessionPlayer GameSessionPlayer[]
+}
+
+
+model Game {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  maxPlayer         Int
+  minPlayer         Int
+  thumbnail         String?
+  PlayerGameProfile PlayerGameProfile[]
+  GameSession       GameSession[]
+}
+
+model PlayerGameProfile {
+  id              Int  @id @default(autoincrement())
+  gameID          Int
+  game            Game @relation(fields: [gameID], references: [id])
+  playerID        Int
+  player          User @relation(fields: [playerID], references: [id])
+  highScore       Int  @default(0)
+  totalPlayedTime Int  @default(0)
+  gameCount       Int  @default(0)
+
+  @@unique([gameID, playerID])
+}
+
+enum Status {
+  WAITING
+  PLAYING
+  LEFT
+  FINISHED
+}
+
+model GameSession {
+  id                Int                 @id @default(autoincrement())
+  gameID            Int
+  game              Game                @relation(fields: [gameID], references: [id])
+  status            Status              @default(WAITING)
+  winner            String?
+  GameSessionPlayer GameSessionPlayer[]
+}
+
+model GameSessionPlayer {
+  id          Int         @id @default(autoincrement())
+  sessionID   Int
+  gameSession GameSession @relation(fields: [sessionID], references: [id])
+  playerID    Int
+  player      User        @relation(fields: [playerID], references: [id])
 }
