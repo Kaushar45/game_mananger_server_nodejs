@@ -1,8 +1,8 @@
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
   if (err.isCustom) {
     return res.status(err.statusCode).json({ errorMessage: err.message });
   }
+  console.error(err.stack);
   res.status(500).json({ errorMessage: "Something broke!" });
 };
 
