@@ -11,6 +11,7 @@ dotenv.config();
 
 const signup = async (req, res, next) => {
   const result = await UserSignupModel.safeParseAsync(req.body);
+
   if (!result.success) {
     throw new ServerError(400, errorPritify(result));
   }
@@ -52,25 +53,15 @@ const login = async (req, res, next) => {
     throw new ServerError(404, "user not found.");
   }
 
-  if (!user.accountVerified) {
-    throw new ServerError(404, "verify your account first");
-  }
   const isOk = await bcrypt.compare(req.body.password, user.password);
 
   if (!isOk) {
     throw new ServerError(401, "wrong password.");
   }
 
-  const token = asyncJwtSign(
-    {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    },
-    process.env.TOKEN_SECRET,
-    {
-      expiresIn: "1h",
-    }
+  const token = await asyncJwtSign(
+    { id: user.id, name: user.name, email: user.email },
+    process.env.TOKEN_SECRET
   );
 
   res.json({
@@ -120,6 +111,7 @@ const resetPassword = async (req, res, next) => {
   }
 
   const user = users[0];
+  console.log(user);
 
   if (dayjs().isAfter(dayjs(user.resetTokenExpiry))) {
     throw new ServerError(400, "Link has expired! Try again");
