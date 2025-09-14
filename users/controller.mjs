@@ -15,13 +15,25 @@ const signup = async (req, res, next) => {
   if (!result.success) {
     throw new ServerError(400, errorPritify(result));
   }
+  const existingUser = await prisma.user.findUnique({
+    where: { email: req.body.email },
+  });
+
+  if (existingUser) {
+    return res.status(400).json({ message: "User already exists" });
+  }
   const hasedPassword = await bcrypt.hash(req.body.password, 10);
+
+  const token = Randomstring.generate(32);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
   const newUser = await prisma.user.create({
     data: {
       email: req.body.email,
       name: req.body.name,
       password: hasedPassword,
+      resetToken: token,
+      resetTokenExpiry: expiresAt,
     },
   });
   await emailQueue.add("Welcome Email", {
@@ -29,7 +41,7 @@ const signup = async (req, res, next) => {
     subject: "Verification Email",
     body: `<html>
       <h1>Welcome ${newUser.name}</h1>
-      <a href="http:localhost5000/signup"> click here to veriy account</a>
+      <a href= http://localhost:5000/resetPassword/${randomString}> click here to veriy account</a>
     </html>`,
   });
 
@@ -52,6 +64,10 @@ const login = async (req, res, next) => {
   if (!user) {
     throw new ServerError(404, "user not found.");
   }
+
+  // if (!user.accountVerified) {
+  //   throw new ServerError(404, "verify you account first");
+  // }
 
   const isOk = await bcrypt.compare(req.body.password, user.password);
 
@@ -84,10 +100,16 @@ const forgotPassword = async (req, res, next) => {
   }
 
   const token = Randomstring.generate(32);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
   console.log(token);
+
   await prisma.user.update({
     where: { email: req.body.email },
-    data: { resetToken: token, resetTokenExpiry: new Date(Date.now()) },
+    data: {
+      resetToken: token,
+      resetTokenExpiry: new Date(Date.now() + 15 * 60 * 1000),
+    },
   });
 
   await emailQueue.add("Forgot_Password Email", {
@@ -113,8 +135,11 @@ const resetPassword = async (req, res, next) => {
   const user = users[0];
   console.log(user);
 
-  if (dayjs().isAfter(dayjs(user.resetTokenExpiry))) {
+  if (new Date(user.tokenExpiry) < new Date()) {
     throw new ServerError(400, "Link has expired! Try again");
+  }
+  if (!user.accountVerified) {
+    throw new ServerError(404, "verify you account first");
   }
 
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
