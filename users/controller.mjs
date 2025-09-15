@@ -6,6 +6,7 @@ import emailQueue from "../queue/email.queue.mjs";
 import { asyncJwtSign } from "../async_jwt.mjs";
 import Randomstring from "randomstring";
 import dayjs from "dayjs";
+import { generateSecureRandomString } from "../utils.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -24,8 +25,9 @@ const signup = async (req, res, next) => {
   }
   const hasedPassword = await bcrypt.hash(req.body.password, 10);
 
-  const token = Randomstring.generate(32);
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  const token = generateSecureRandomString(32);
+
+  const futureExpiryTime = dayjs().add(15, "minute");
 
   const newUser = await prisma.user.create({
     data: {
@@ -33,15 +35,18 @@ const signup = async (req, res, next) => {
       name: req.body.name,
       password: hasedPassword,
       resetToken: token,
-      resetTokenExpiry: expiresAt,
+      resetTokenExpiry: futureExpiryTime,
     },
   });
+
+  const link = `${req.protocol}://${process.env.FRONTEND_URL}/${token}`;
+
   await emailQueue.add("Welcome Email", {
     to: newUser.email,
     subject: "Verification Email",
     body: `<html>
       <h1>Welcome ${newUser.name}</h1>
-      <a href= http://localhost:5000/resetPassword/${randomString}> click here to veriy account</a>
+      <a href= ${link}> click here to veriy account</a>
     </html>`,
   });
 
@@ -150,6 +155,7 @@ const resetPassword = async (req, res, next) => {
     },
 
     data: {
+      accountVerified: true,
       resetToken: null,
       password: hashedPassword,
       resetTokenExpiry: null,
