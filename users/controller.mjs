@@ -168,4 +168,16 @@ const getMyProfile = async (req, res, next) => {
   res.json({ message: "This is My Profile" });
 };
 
-export { signup, login, forgotPassword, resetPassword, getMyProfile };
+const updateProfileImage = async (req, res, next) => {
+  console.log(req.file);
+  res.json({ msg: "oiuyjthgr" });
+};
+
+export {
+  signup,
+  login,
+  forgotPassword,
+  resetPassword,
+  getMyProfile,
+  updateProfileImage,
+};
