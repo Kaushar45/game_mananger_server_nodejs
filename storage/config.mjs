@@ -1,33 +1,29 @@
 import multer from "multer";
 import { ServerError } from "../error.mjs";
 
-const uploadConfig = {
-  maxFileSize: 2 * 1024 * 1024,
-  allowedMimeTypes: ["image/jpeg", "image/png"],
-  allowedExtensions: [".jpg", ".jpeg", ".png"],
-  destination: "./uploads/",
-};
-
 // Memory storage (keeps files in RAM as Buffer)
 const storage = multer.memoryStorage();
 
 // File filter for images only
-const fileFilter = (req, file, cb) => {
+const fileFilter = (req, file, callback) => {
   if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
+    callback(null, true);
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    callback(new Error("Only image files are allowed"), false);
   }
 };
 
-const upload = multer({
-  storage: storage,
+const uploadConfig = {
+  storage,
+  dest: "./uploads/",
   limits: {
-    fileSize: uploadConfig.maxFileSize,
+    fileSize: 0.5 * 1024 * 1024,
     files: 1,
   },
-  fileFilter: fileFilter,
-});
+  fileFilter,
+};
+
+const upload = multer(uploadConfig);
 
 const singleImageUpload = (fieldName = "image") => {
   return async (req, res, next) => {
@@ -35,6 +31,7 @@ const singleImageUpload = (fieldName = "image") => {
 
     singleUpload(req, res, (error) => {
       if (error) {
+        // Handle different types of multer errors
         if (error instanceof multer.MulterError) {
           switch (error.code) {
             case "LIMIT_FILE_SIZE":
@@ -42,8 +39,8 @@ const singleImageUpload = (fieldName = "image") => {
                 new ServerError(
                   400,
                   `File size must be less than ${
-                    uploadConfig.maxFileSize / (1024 * 1024)
-                  }MB`
+                    uploadConfig.limits.fileSize / 1024
+                  }KB`
                 )
               );
 
@@ -69,14 +66,14 @@ const singleImageUpload = (fieldName = "image") => {
         return next(new ServerError(400, "Please select a file to upload"));
       }
 
-      // Add file info to request object for further processing
-      req.uploadedFile = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path,
-      };
+      // // Add file info to request object for further processing
+      // req.uploadedFile = {
+      //   filename: req.file.filename,
+      //   originalName: req.file.originalname,
+      //   mimetype: req.file.mimetype,
+      //   size: req.file.size,
+      //   path: req.file.path
+      // };
 
       next();
     });
