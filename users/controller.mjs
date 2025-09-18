@@ -4,9 +4,9 @@ import prisma from "../prisma/db.mjs";
 import { errorPritify, UserSignupModel, UserLoginModel } from "./validator.mjs";
 import emailQueue from "../queue/email.queue.mjs";
 import { asyncJwtSign } from "../async_jwt.mjs";
-import Randomstring from "randomstring";
 import dayjs from "dayjs";
 import { generateSecureRandomString } from "../utils.mjs";
+import { uploadImage } from "../storage/storage.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -27,7 +27,7 @@ const signup = async (req, res, next) => {
 
   const token = generateSecureRandomString(32);
 
-  const futureExpiryTime = dayjs().add(15, "minute");
+  const expiryTime = dayjs().add(15, "minute");
 
   const newUser = await prisma.user.create({
     data: {
@@ -35,7 +35,7 @@ const signup = async (req, res, next) => {
       name: req.body.name,
       password: hasedPassword,
       resetToken: token,
-      resetTokenExpiry: futureExpiryTime,
+      resetTokenExpiry: expiryTime,
     },
   });
 
@@ -55,11 +55,10 @@ const signup = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   const result = await UserLoginModel.safeParseAsync(req.body);
-
   if (!result.success) {
     throw new ServerError(400, errorPritify(result));
   }
-  // find user in DB
+
   const user = await prisma.user.findUnique({
     where: {
       email: req.body.email,
@@ -67,101 +66,117 @@ const login = async (req, res, next) => {
   });
 
   if (!user) {
-    throw new ServerError(404, "user not found.");
+    throw new ServerError(404, "user is not found");
   }
 
-  // if (!user.accountVerified) {
-  //   throw new ServerError(404, "verify you account first");
-  // }
+  if (!user.accountVerified) {
+    throw new ServerError(404, "verify you account");
+  }
 
-  const isOk = await bcrypt.compare(req.body.password, user.password);
-
-  if (!isOk) {
-    throw new ServerError(401, "wrong password.");
+  if (!(await bcrypt.compare(req.body.password, user.password))) {
+    throw new ServerError(401, "password does not match");
   }
 
   const token = await asyncJwtSign(
     { id: user.id, name: user.name, email: user.email },
-    process.env.TOKEN_SECRET
+    process.env.TOKEN_SECRET,
+    { expiresIn: process.env.RESET_LINK_EXPIRY_TIME_IN_MINUTES }
   );
-
   res.json({
-    msg: "login is successful",
+    msg: "login successful",
     token,
+    id: user.id,
     name: user.name,
     email: user.email,
+    profilePhoto: user.profilePhoto,
   });
 };
 
 const forgotPassword = async (req, res, next) => {
-  const user = await prisma.user.findUnique({
-    where: {
-      email: req.body.email,
-    },
-  });
-
-  if (!user) {
-    throw new ServerError(404, "User Does Not Exist.");
-  }
-
-  const token = Randomstring.generate(32);
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  const token = generateSecureRandomString(32);
+  const expiryTime = dayjs().add(15, "minute");
 
   console.log(token);
 
-  await prisma.user.update({
-    where: { email: req.body.email },
+  const userArr = await prisma.user.updateManyAndReturn({
+    where: {
+      email: req.body.email,
+    },
     data: {
       resetToken: token,
-      resetTokenExpiry: new Date(Date.now() + 15 * 60 * 1000),
+      resetTokenExpiry: expiryTime,
     },
   });
+
+  if (userArr.length === 0) {
+    throw new ServerError(404, "User not found, please signup first");
+  }
+
+  const user = userArr[0];
+
+  const link = `${req.protocol}://${process.env.FRONTEND_URL}/${token}`;
 
   await emailQueue.add("Forgot_Password Email", {
     to: user.email,
     subject: "Forgot Password Email",
-    body: `<html><body>Click this link <a href="http://localhost:5000/reset_password/${token}">Click Here</a></body></html>`,
+    body: `<html>
+      <h1>Hi, ${user.name}</h1>
+      <a href=${link}>Click Here to reset password</a>
+    </html>`,
   });
 
   res.json({ msg: "Email sent successfully, check your email" });
 };
 
 const resetPassword = async (req, res, next) => {
-  const users = await prisma.user.findMany({
+  // 1. Extract token from req.body
+  if (!req.body || !req.body.token) {
+    throw new ServerError(401, "Invalid link or token");
+  }
+
+  console.log(token);
+  const user = await prisma.user.findFirst({
     where: {
       resetToken: req.body.token,
     },
   });
-
-  if (!users) {
-    throw new ServerError(404, "invalid reset link");
-  }
-
-  const user = users[0];
   console.log(user);
-
-  if (new Date(user.tokenExpiry) < new Date()) {
-    throw new ServerError(400, "Link has expired! Try again");
+  if (!user) {
+    throw new ServerError(401, "Invalid link or token");
   }
-  if (!user.accountVerified) {
-    throw new ServerError(404, "verify you account first");
+  // 3. check for token expiry
+  if (dayjs(user.tokenExpiry).isBefore(dayjs())) {
+    throw new ServerError(401, "Link expired");
+  }
+  if (user.accountVerified && !req.body.password) {
+    if (req.body.password.length < 6) {
+      throw new ServerError(401, "password should not be less than 6");
+    }
+    throw new ServerError(401, "password must be supplied");
   }
 
-  const hashedPassword = await bcrypt.hash(req.body.password, 10);
-
-  await prisma.user.update({
-    where: {
-      id: user.id,
-    },
-
-    data: {
-      accountVerified: true,
-      resetToken: null,
-      password: hashedPassword,
-      resetTokenExpiry: null,
-    },
-  });
-  res.json({ message: "password reset successful" });
+  if (user.accountVerified) {
+    const hashedPass = await bcrypt.hash(req.body.password, 10);
+    await prisma.user.updateMany({
+      where: { id: user.id },
+      data: {
+        password: hashedPass,
+        resetToken: null,
+        tokenExpiry: null,
+      },
+    });
+    res.json({ msg: "reset password successful" });
+  } else {
+    await prisma.user.updateMany({
+      where: { id: user.id },
+      data: {
+        accountVerified: true,
+        resetToken: null,
+        tokenExpiry: null,
+      },
+    });
+    res.json({ msg: "Account verification successful" });
+  }
 };
 
 const getMyProfile = async (req, res, next) => {
@@ -170,7 +185,16 @@ const getMyProfile = async (req, res, next) => {
 
 const updateProfileImage = async (req, res, next) => {
   console.log(req.file);
-  res.json({ msg: "oiuyjthgr" });
+  const result = await uploadImage(req.file, "profiles", true);
+  console.log(result);
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: {
+      profilePhoto: result.secure_url,
+    },
+  });
+
+  res.json({ msg: "Profile Photo Update" });
 };
 
 export {

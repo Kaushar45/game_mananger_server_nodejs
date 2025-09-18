@@ -17,7 +17,7 @@ const uploadConfig = {
   storage,
   dest: "./uploads/",
   limits: {
-    fileSize: 0.5 * 1024 * 1024,
+    fileSize: 2 * 1024 * 1024,
     files: 1,
   },
   fileFilter,
@@ -39,8 +39,8 @@ const singleImageUpload = (fieldName = "image") => {
                 new ServerError(
                   400,
                   `File size must be less than ${
-                    uploadConfig.limits.fileSize / 1024
-                  }KB`
+                    (uploadConfig.limits.fileSize / 1024) * 1024
+                  }MB`
                 )
               );
 
@@ -65,16 +65,6 @@ const singleImageUpload = (fieldName = "image") => {
       if (!req.file) {
         return next(new ServerError(400, "Please select a file to upload"));
       }
-
-      // // Add file info to request object for further processing
-      // req.uploadedFile = {
-      //   filename: req.file.filename,
-      //   originalName: req.file.originalname,
-      //   mimetype: req.file.mimetype,
-      //   size: req.file.size,
-      //   path: req.file.path
-      // };
-
       next();
     });
   };
