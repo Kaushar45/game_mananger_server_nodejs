@@ -7,10 +7,6 @@ const createSession = async (req, res, next) => {
   res.json({ msg: "create session is successful", session });
 };
 const addPlayer = async (req, res, next) => {
-
-
-  
-
   res.json({ msg: "add player" });
 };
 const listSession = async (req, res, next) => {

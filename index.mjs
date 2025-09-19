@@ -3,11 +3,10 @@ import { errorHandler } from "./error.mjs";
 import userRouter from "./users/router.mjs";
 import gameRouter from "./game/router.mjs";
 import sessionRouter from "./session/router.mjs";
-
-const app = express();
-
 import dotenv from "dotenv";
 dotenv.config();
+
+const app = express();
 
 app.use(express.json());
 

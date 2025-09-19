@@ -1,31 +1,25 @@
-// 1. check for token is available
-// 2. validate token
-// 3. extract playload of token
-// 4. attach to request for further use
-
-import jwt from "jsonwebtoken";
+import { asyncJwtVerify } from "./async_jwt.mjs";
 import { ServerError } from "./error.mjs";
-import dotenv from "dotenv";
-dotenv.config();
 
 const authentication = async (req, res, next) => {
   if (!req.headers.authorization) {
-    throw new ServerError(400, "token is not sent");
+    throw new ServerError(401, "token not supplied");
   }
 
-  const barerToken = req.headers.authorization.split(" ");
-  const token = barerToken[1];
-  if (!token) {
-    throw new ServerError(400, "token not valid");
+  const [bearer, token] = req.headers.authorization.split(" ");
+  if (!bearer || !token) {
+    throw new ServerError(401, "Bearer token not supplied");
+  }
+  if (bearer !== "Bearer") {
+    throw new ServerError(401, "Bearer token not supplied!");
   }
 
   try {
-    jwt.verify(token, process.env.TOKEN_SECRET);
-  } catch (e) {
-    throw new ServerError(400, e.message);
+    const user = await asyncJwtVerify(token, process.env.TOKEN_SECRET);
+    req.user = user;
+  } catch (err) {
+    throw new ServerError(401, err.message);
   }
-
-  req.user = jwt.decode(token);
   next();
 };
 
