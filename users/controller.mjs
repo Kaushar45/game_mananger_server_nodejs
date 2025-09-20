@@ -184,16 +184,27 @@ const getMyProfile = async (req, res, next) => {
 };
 
 const updateProfileImage = async (req, res, next) => {
-  console.log(req.file);
-  const result = await uploadImage(req.file, "profiles", true);
-  console.log(result);
+  const user = await prisma.user.findUnique({
+    where: {
+      id: req.user.id,
+    },
+  });
+  let result;
+  if (!user.profilePhoto) {
+    const fileName = `${generateSecureRandomString(32)}`;
+    result = await uploadImage(req.file.buffer, fileName, "profiles", true);
+  } else {
+    const splittedUrl = user.profilePhoto.split("/");
+    const fileNameWithExt = splittedUrl[splittedUrl.length - 1];
+    const fileName = fileNameWithExt.split(".")[0];
+    result = await uploadImage(req.file.buffer, fileName, "profiles", true);
+  }
   await prisma.user.update({
     where: { id: req.user.id },
     data: {
       profilePhoto: result.secure_url,
     },
   });
-
   res.json({ msg: "Profile Photo Update" });
 };
 
