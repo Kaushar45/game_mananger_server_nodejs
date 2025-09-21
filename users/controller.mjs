@@ -180,7 +180,23 @@ const resetPassword = async (req, res, next) => {
 };
 
 const getMyProfile = async (req, res, next) => {
-  res.json({ message: "This is My Profile" });
+  const user = await prisma.user.findUnique({
+    where: {
+      email: req.body.email,
+    },
+  });
+
+  if (!user) {
+    throw new ServerError(404, "user is not found");
+  }
+  console.log(user);
+  res.json({
+    message: "This is My Profile",
+    name: user.name,
+    email: user.email,
+    profilePhoto: user.profilePhoto,
+    createdAt: user.createdAt,
+  });
 };
 
 const updateProfileImage = async (req, res, next) => {
