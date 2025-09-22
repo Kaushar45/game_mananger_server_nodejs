@@ -224,6 +224,19 @@ const updateProfileImage = async (req, res, next) => {
   res.json({ msg: "Profile Photo Update" });
 };
 
+const deleteProfileImage = async (req, res, next) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: req.user.id,
+    },
+  });
+  console.log(user); 
+
+  res.json({
+    message: "profile photo deleted",
+  });
+};
+
 export {
   signup,
   login,
@@ -231,4 +244,5 @@ export {
   resetPassword,
   getMyProfile,
   updateProfileImage,
+  deleteProfileImage,
 };

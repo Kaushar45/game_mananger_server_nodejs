@@ -30,4 +30,6 @@ const uploadImage = async (buffer, fileName, folderName, isPublic) => {
   }
 };
 
-export { uploadImage };
+const deleteImage = async (fileName, folderName, isPublic) => {};
+
+export { uploadImage, deleteImage };

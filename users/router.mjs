@@ -7,9 +7,10 @@ import {
   resetPassword,
   getMyProfile,
   updateProfileImage,
+  deleteProfileImage,
 } from "./controller.mjs";
 import { authentication } from "../auth.mjs";
-import { singleImageUpload} from "../storage/config.mjs";
+import { singleImageUpload } from "../storage/config.mjs";
 
 userRouter
   .post("/signup", signup)
@@ -22,6 +23,7 @@ userRouter
     authentication,
     singleImageUpload("image"),
     updateProfileImage
-  );
+  )
+  .delete("/profile/delete", authentication, deleteProfileImage);
 
 export default userRouter;
