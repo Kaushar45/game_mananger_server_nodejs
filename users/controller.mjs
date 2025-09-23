@@ -6,7 +6,7 @@ import emailQueue from "../queue/email.queue.mjs";
 import { asyncJwtSign } from "../async_jwt.mjs";
 import dayjs from "dayjs";
 import { generateSecureRandomString } from "../utils.mjs";
-import { uploadImage } from "../storage/storage.mjs";
+import { uploadImage, deleteImage } from "../storage/storage.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -230,10 +230,26 @@ const deleteProfileImage = async (req, res, next) => {
       id: req.user.id,
     },
   });
-  console.log(user); 
+
+  if (!user || !user.profilePhoto) {
+    return res.status(404).json({ message: "Profile photo not found" });
+  }
+
+  const splittedUrl = user.profilePhoto.split("/");
+  const fileNameWithExt = splittedUrl[splittedUrl.length - 1];
+  const fileName = fileNameWithExt.split(".")[0];
+
+  await deleteImage(fileName, "profiles");
+
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: {
+      profilePhoto: null,
+    },
+  });
 
   res.json({
-    message: "profile photo deleted",
+    message: "Profile photo deleted successfully",
   });
 };
 

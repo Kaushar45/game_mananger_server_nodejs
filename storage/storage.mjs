@@ -30,6 +30,23 @@ const uploadImage = async (buffer, fileName, folderName, isPublic) => {
   }
 };
 
-const deleteImage = async (fileName, folderName, isPublic) => {};
+const deleteImage = async (fileName, folderName) => {
+  try {
+    const publicId = `${folderName}/${fileName}`;
+
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+      invalidate: true,
+    });
+  
+    if (result.result !== "ok" && result.result !== "not found") {
+      throw new Error(`Failed to delete image: ${result.result}`);
+    }
+    return result;
+    
+  } catch (err) {
+    throw new ServerError(400, err.message);
+  }
+};
 
 export { uploadImage, deleteImage };
