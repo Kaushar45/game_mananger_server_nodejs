@@ -65,6 +65,10 @@ model GameSession {
   game              Game                @relation(fields: [gameID], references: [id])
   status            Status              @default(WAITING)
   winner            String?
+  GameUrl           String?
+  ProcessID         Int?
+  CreatedAt         DateTime            @default(now())
+  StartedAt         DateTime?
   GameSessionPlayer GameSessionPlayer[]
 }
 
@@ -74,4 +78,5 @@ model GameSessionPlayer {
   gameSession GameSession @relation(fields: [sessionID], references: [id])
   playerID    Int
   player      User        @relation(fields: [playerID], references: [id])
+ @@unique([sessionID, playerID])
 }
