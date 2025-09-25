@@ -12,6 +12,7 @@ const addGame = async (req, res, next) => {
 
   res.json({ msg: "successful", game });
 };
+
 const listGame = async (req, res, next) => {
   const games = await prisma.game.findMany();
   res.json({ msg: "successful", games });
@@ -33,21 +34,15 @@ const requestGame = async (req, res, name) => {
       },
     });
   }
+  let gameSessionPlayer;
   try {
-    const gameSessionPlayer = await prisma.gameSessionPlayer.create({
+    gameSessionPlayer = await prisma.gameSessionPlayer.create({
       data: {
         sessionID: gameSession.id,
         playerID: req.user.id,
       },
     });
-
-    res.json({
-      msg: "successful",
-      gameID: req.body.gameID,
-      gameSession,
-      gameSessionPlayer,
-    });
-  } catch (err){
+  } catch (err) {
     if (err.code === DB_ERR_CODES.UNIQUE_ERR) {
       throw new ServerError(
         400,
@@ -56,6 +51,30 @@ const requestGame = async (req, res, name) => {
     }
     throw err;
   }
+  const game = await prisma.game.findUnique({
+    where: {
+      id: req.body.gameID,
+    },
+  });
+
+  // find total number of players in this game sission
+
+  const totalPlayers = await prisma.gameSessionPlayer.count({
+    where: {
+      sessionID: gameSession.id,
+    },
+  });
+
+  console.log(totalPlayers);
+
+  res.json({
+    msg: "successful",
+    gameID: req.body.gameID,
+    gameSession,
+    gameSessionPlayer,
+    totalPlayers,
+    game,
+  });
 };
 
 export { addGame, listGame, requestGame };
