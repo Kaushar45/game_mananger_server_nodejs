@@ -59,21 +59,33 @@ const requestGame = async (req, res, name) => {
 
   // find total number of players in this game sission
 
-  const totalPlayers = await prisma.gameSessionPlayer.count({
+  const data = await prisma.gameSessionPlayer.aggregate({
     where: {
       sessionID: gameSession.id,
     },
+    _count: {
+      playerID: true,
+    },
   });
 
-  console.log(totalPlayers);
+  if (game.maxPlayer > data._count.playerID) {
+    return res.json({
+      msg: "successful, Wait for other players to join",
+      gameID: req.body.gameID,
+      gameSession,
+      gameSessionPlayer,
+      data,
+    });
+  }
+
+  console.log("start game");
 
   res.json({
     msg: "successful",
     gameID: req.body.gameID,
     gameSession,
     gameSessionPlayer,
-    totalPlayers,
-    game,
+    data,
   });
 };
 
