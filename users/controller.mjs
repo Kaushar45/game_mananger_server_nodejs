@@ -133,8 +133,8 @@ const resetPassword = async (req, res, next) => {
   if (!req.body || !req.body.token) {
     throw new ServerError(401, "Invalid link or token");
   }
-
   console.log(token);
+  // 2. find User via token from DB
   const user = await prisma.user.findFirst({
     where: {
       resetToken: req.body.token,
@@ -144,7 +144,6 @@ const resetPassword = async (req, res, next) => {
   if (!user) {
     throw new ServerError(401, "Invalid link or token");
   }
-  // 3. check for token expiry
   if (dayjs(user.tokenExpiry).isBefore(dayjs())) {
     throw new ServerError(401, "Link expired");
   }

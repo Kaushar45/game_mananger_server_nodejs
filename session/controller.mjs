@@ -1,3 +1,5 @@
+import prisma from "../prisma/db.mjs";
+
 const createSession = async (req, res, next) => {
   const session = await prisma.gameSession.create({
     data: {
