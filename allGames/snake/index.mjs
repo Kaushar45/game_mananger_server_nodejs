@@ -2,8 +2,10 @@ import express from "express";
 import { createServer } from "node:http";
 import path from "node:path";
 import { Server } from "socket.io";
-import { fileURLToPath } from "url";
-const PORT = 3001;
+import { fileURLToPath } from "node:url";
+
+// console.log(process.argv)
+const PORT = process.argv[2] || 80;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,9 +99,6 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/test", (req, res, next) => {
-  res.json({ msg: "hello" });
-});
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));

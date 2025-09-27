@@ -1,6 +1,6 @@
 import { ServerError } from "../error.mjs";
 import prisma, { DB_ERR_CODES } from "../prisma/db.mjs";
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 
 const addGame = async (req, res, next) => {
   const game = await prisma.game.create({
@@ -78,16 +78,9 @@ const requestGame = async (req, res, name) => {
       data,
     });
   }
-  const gameInstance = spawn(
-    "node",
-    ["D:\nodeJSgameServerallGamessnakeserverindex.mjs"],
-    {
-      detached: true,
-      stdio: "ignore",
-    }
-  );
-  gameInstance.unref();
-  console.log(gameInstance);
+
+  console.log("Start Game");
+  const pid = await startGame();
 
   res.json({
     msg: "successful",
@@ -95,7 +88,24 @@ const requestGame = async (req, res, name) => {
     gameSession,
     gameSessionPlayer,
     data,
+    pid,
   });
+};
+
+const startGame = async () => {
+  const gameInstance = spawn(
+    "node",
+    ["D:\nodeJS/gameServer/allGames/snakeserver/index.mjs", 8080],
+    {
+      detached: true,
+      stdio: "ignore",
+    }
+  );
+  gameInstance.unref();
+  console.log(gameInstance);
+  return {
+    pid: gameInstance.pid,
+  };
 };
 
 export { addGame, listGame, requestGame };
