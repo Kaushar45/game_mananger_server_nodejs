@@ -1,6 +1,11 @@
+import path from "node:path";
 import { ServerError } from "../error.mjs";
 import prisma, { DB_ERR_CODES } from "../prisma/db.mjs";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const addGame = async (req, res, next) => {
   const game = await prisma.game.create({
@@ -80,7 +85,19 @@ const requestGame = async (req, res, name) => {
   }
 
   console.log("Start Game");
-  const pid = await startGame();
+  const { pid, port } = await startGame(game);
+  const gameURL = `${req.protocol}://${req.get("host")}:${port}`;
+  await prisma.gameSession.updateMany({
+    where: {
+      id: gameSession.id,
+    },
+    data: {
+      GameUrl: gameURL,
+      ProcessID: pid,
+      status: "PLAYING",
+      StartedAt: new Date(),
+    },
+  });
 
   res.json({
     msg: "successful",
@@ -89,13 +106,15 @@ const requestGame = async (req, res, name) => {
     gameSessionPlayer,
     data,
     pid,
+    url: gameURL,
   });
 };
 
-const startGame = async () => {
+const startGame = async (game) => {
+  const port = Math.ceil(Math.random() * 6200) + 3000;
   const gameInstance = spawn(
     "node",
-    ["D:\nodeJS/gameServer/allGames/snakeserver/index.mjs", 8080],
+    [path.resolve(__dirname, `../allGames/${game.name}/index.mjs`), port],
     {
       detached: true,
       stdio: "ignore",
@@ -105,6 +124,7 @@ const startGame = async () => {
   console.log(gameInstance);
   return {
     pid: gameInstance.pid,
+    port,
   };
 };
 
