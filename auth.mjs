@@ -23,4 +23,13 @@ const authentication = async (req, res, next) => {
   next();
 };
 
-export { authentication };
+const authorization = (...roles) => {
+  console.log(roles);
+  return async (req, res, next) => {
+    console.log("check authority");
+    if (roles.findIndex((e) => e === req.user.role) < 0)
+      throw new ServerError(400, "You are not Authorized");
+    next();
+  };
+}; 
+export { authentication, authorization };

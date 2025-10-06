@@ -78,7 +78,7 @@ const login = async (req, res, next) => {
   }
 
   const token = await asyncJwtSign(
-    { id: user.id, name: user.name, email: user.email },
+    { id: user.id, name: user.name, email: user.email, role: user.role },
     process.env.TOKEN_SECRET,
     { expiresIn: process.env.RESET_LINK_EXPIRY_TIME_IN_MINUTES }
   );
